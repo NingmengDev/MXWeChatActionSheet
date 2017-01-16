@@ -272,7 +272,7 @@
 @property (copy, nonatomic) MXWeChatActionSheetTapBlock tapBlock;
 @property (copy, nonatomic) NSString *title;
 @property (copy, nonatomic) NSArray <NSString *> *actions;
-@property (assign, nonatomic) BOOL isPresented;
+@property (nonatomic, getter=isAnimating) BOOL animating;
 
 @end
 
@@ -521,6 +521,8 @@ extern UIWindow *MXWAS_KeyWindow()
 {
     [MXWAS_KeyWindow() addSubview:self];
     
+    self.animating = YES;
+    
     self.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.0];
     [UIView animateWithDuration:MXWAS_ANIMATION_DURATION animations:^{
         self.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.35];
@@ -529,12 +531,14 @@ extern UIWindow *MXWAS_KeyWindow()
         rect.origin.y = CGRectGetHeight(self.bounds) - CGRectGetHeight(rect);
         self.contentView.frame = rect;
     } completion:^(BOOL finished) {
-        self.isPresented = YES;
+        self.animating = NO;
     }];
 }
 
 - (void)dismissWithAnimation
 {
+    self.animating = YES;
+    
     [UIView animateWithDuration:MXWAS_ANIMATION_DURATION animations:^{
         self.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.0];
         
@@ -542,8 +546,8 @@ extern UIWindow *MXWAS_KeyWindow()
         rect.origin.y = CGRectGetHeight(self.bounds);
         self.contentView.frame = rect;
     } completion:^(BOOL finished) {
+        self.animating = NO;
         [self removeFromSuperview];
-        self.isPresented = NO;
     }];
 }
 
@@ -553,8 +557,12 @@ extern UIWindow *MXWAS_KeyWindow()
 {
     [super layoutSubviews];
     
-    // 在show过程中，有一个从下往上显示的动画过程，为了防止在动画过程中contentView的frame被修改掉，故在动画过程中使用isPresented属性来屏蔽掉[MXWeChatActionSheet layoutSubviews]方法对contentView的frame的修改。
-    if (!self.isPresented) return;
+    /**
+     *  在show或dismiss过程中，有一个动画过程，
+     *  为了防止在动画过程中contentView的frame被修改掉，
+     *  故在动画过程中使用isAnimating属性来屏蔽掉[MXWeChatActionSheet layoutSubviews]方法对contentView的frame的修改。
+     */
+    if (self.isAnimating) return;
     
     CGRect rect = [self rectForContentView];
     [self.contentView setFrame:rect];
